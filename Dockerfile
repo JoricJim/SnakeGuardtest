@@ -2,7 +2,7 @@
 # nodejs 20 hangs on build with armv6/armv7
 FROM node:18-alpine AS build_node_modules
 
-RUN npm install -g npm@latest
+RUN npm install -g npm@8.18.0
 
 # Copy Web UI
 COPY src /app
