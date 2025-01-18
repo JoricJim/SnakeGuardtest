@@ -11,7 +11,7 @@ services:
       - etc_wireguard:/etc/wireguard
     ports:
       - "${WG_PORT}:${WG_PORT}/udp"
-      - "${RPORT}:${RPORT}/tcp"
+      - "${PORT}:${PORT}/tcp"
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
