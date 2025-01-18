@@ -45,7 +45,11 @@ RUN update-alternatives --install /sbin/iptables iptables /sbin/iptables-legacy 
 ENV DEBUG=Server,WireGuard
 
 EXPOSE 51820/udp
+EXPOSE 51821/udp
+EXPOSE 443/udp
+EXPOSE 51820/tcp
 EXPOSE 51821/tcp
+EXPOSE 443/tcp
 
 
 # Run Web UI
