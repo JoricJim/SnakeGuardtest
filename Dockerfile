@@ -1,54 +1,37 @@
-# As a workaround we have to build on nodejs 18
-# nodejs 20 hangs on build with armv6/armv7
-FROM node:18-alpine AS build_node_modules
+ARG PYTHON_VERSION=3.12
 
-RUN npm install -g npm@8.18.0
+FROM python:$PYTHON_VERSION-slim AS build
 
-# Copy Web UI
-COPY src /app
-WORKDIR /app
-RUN npm ci --omit=dev &&\
-    mv node_modules /node_modules
+ENV PYTHONUNBUFFERED=1
 
-# Copy build result to a new image.
-# This saves a lot of disk space.
-FROM amneziavpn/amnezia-wg:latest
-HEALTHCHECK CMD /usr/bin/timeout 5s /bin/sh -c "/usr/bin/wg show | /bin/grep -q interface || exit 1" --interval=1m --timeout=5s --retries=3
-COPY --from=build_node_modules /app /app
+WORKDIR /code
 
-# Move node_modules one directory up, so during development
-# we don't have to mount it in a volume.
-# This results in much faster reloading!
-#
-# Also, some node_modules might be native, and
-# the architecture & OS of your development machine might differ
-# than what runs inside of docker.
-COPY --from=build_node_modules /node_modules /node_modules
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential curl unzip gcc python3-dev libpq-dev \
+    && curl -L https://github.com/Gozargah/Marzban-scripts/raw/master/install_latest_xray.sh | bash \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy the needed wg-password scripts
-COPY --from=/etc/wireguard /app/etc/wireguard/wg0.json /etc/wireguard
-COPY --from=build_node_modules /app/wgpw.sh /bin/wgpw
-RUN chmod +x /bin/wgpw
+COPY ./requirements.txt /code/
+RUN python3 -m pip install --upgrade pip setuptools \
+    && pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
-# Install Linux packages
-RUN apk add --no-cache \
-    dpkg \
-    dumb-init \
-    iptables \
-    nodejs \
-    npm
+FROM python:$PYTHON_VERSION-slim
 
-# Use iptables-legacy
-RUN update-alternatives --install /sbin/iptables iptables /sbin/iptables-legacy 10 --slave /sbin/iptables-restore iptables-restore /sbin/iptables-legacy-restore --slave /sbin/iptables-save iptables-save /sbin/iptables-legacy-save
+ENV PYTHON_LIB_PATH=/usr/local/lib/python${PYTHON_VERSION%.*}/site-packages
+WORKDIR /code
 
-# Set Environment
-ENV DEBUG=Server,WireGuard
+RUN rm -rf $PYTHON_LIB_PATH/*
 
-EXPOSE 51820/udp
-EXPOSE 51821/udp
-EXPOSE 51820/tcp
-EXPOSE 51821/tcp
+COPY --from=build $PYTHON_LIB_PATH $PYTHON_LIB_PATH
+COPY --from=build /usr/local/bin /usr/local/bin
+COPY --from=build /usr/local/share/xray /usr/local/share/xray
 
-# Run Web UI
-WORKDIR /app
-CMD ["/usr/bin/dumb-init", "node", "server.js"]
+COPY . /code
+
+RUN ln -s /code/marzban-cli.py /usr/bin/marzban-cli \
+    && chmod +x /usr/bin/marzban-cli \
+    && marzban-cli completion install --shell bash
+
+CMD ["bash", "-c", "alembic upgrade head; python main.py"]
+EXPOSE 8000
+EXPOSE 443
