@@ -1,9 +1,9 @@
 # As a workaround we have to build on nodejs 18
 # nodejs 20 hangs on build with armv6/armv7
-FROM node:18-alpine AS build_node_modules
+FROM docker.io/library/node:20-alpine AS build_node_modules
 
 # Update npm to latest
-RUN npm install -g npm@10.2.3
+RUN npm install -g npm@latest
 
 # Copy Web UI
 COPY src /app
@@ -48,19 +48,14 @@ ENV DEBUG=Server,WireGuard
 WORKDIR /app
 CMD ["/usr/bin/dumb-init", "node", "server.js"]
 
-EXPOSE 51621
+EXPOSE 51821
 EXPOSE 51620
+EXPOSE 443
 
-ENV WG_HOST=147.45.139.241
-ENV LANGUAGE=ru
-ENV PORT=51621
-ENV WG_PORT=51620
-ENV WG_CONFIG_PORT=51620
-ENV WG_DEFAULT_DNS=1.1.1.1
-ENV WG_ALLOWED_IPS=0.0.0.0/0, ::/0
-ENV DICEBEAR_TYPE=croodles
-ENV UI_TRAFFIC_STATS=true
-ENV UI_CHART_TYPE=1
-ENV ENABLE_PROMETHEUS_METRICS=true
-ENV MAX_AGE=1440
-ENV WG_ENABLE_ONE_TIME_LINKS=true
+WG_HOST=🚨YOUR_SERVER_IP
+# (Supports: en, ru, tr, no, pl, fr, de, ca, es)
+LANGUAGE=ru
+PORT=443
+WG_PORT=51820
+DICEBEAR_TYPE=bottts
+USE_GRAVATAR=true
